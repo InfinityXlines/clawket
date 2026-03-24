@@ -40,6 +40,36 @@ import type { ConfigStackParamList } from "./ConfigTab";
 type Navigation = NativeStackNavigationProp<ConfigStackParamList, "HelpCenter">;
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const WECHAT_QR_IMAGE = require("../../../assets/wechat-group-qr.jpg");
+const LAN_DIRECT_CONFIG = `{
+  "gateway": {
+    "bind": "lan",
+    "auth": {
+      "mode": "token",
+      "token": "replace-me"
+    }
+  }
+}`;
+const TAILNET_DIRECT_CONFIG = `{
+  "gateway": {
+    "bind": "tailnet",
+    "auth": {
+      "mode": "token",
+      "token": "replace-me"
+    }
+  }
+}`;
+const TAILSCALE_SERVE_CONFIG = `{
+  "gateway": {
+    "bind": "loopback",
+    "tailscale": {
+      "mode": "serve"
+    },
+    "auth": {
+      "mode": "token",
+      "token": "replace-me"
+    }
+  }
+}`;
 
 export function HelpCenterScreen(): React.JSX.Element {
   const navigation = useNavigation<Navigation>();
@@ -166,6 +196,38 @@ export function HelpCenterScreen(): React.JSX.Element {
     ],
     [t],
   );
+  const builtInConnectionConfigs = useMemo(
+    () => [
+      {
+        title: t("LAN direct"),
+        description: t(
+          "Use this when your phone is on the same local network as the OpenClaw host.",
+        ),
+        config: LAN_DIRECT_CONFIG,
+        url: "ws://<lan-ip>:18789",
+        note: null,
+      },
+      {
+        title: t("Tailscale direct (no Serve)"),
+        description: t(
+          "Use this when both devices are in the same tailnet and you are not using tailscale serve.",
+        ),
+        config: TAILNET_DIRECT_CONFIG,
+        url: "ws://<tailscale-ip>:18789",
+        note: t("Direct Tailnet bind does not use Serve or Funnel."),
+      },
+      {
+        title: t("Tailscale Serve"),
+        description: t(
+          "Use this when you want Tailscale to publish HTTPS for the Gateway while OpenClaw stays on loopback.",
+        ),
+        config: TAILSCALE_SERVE_CONFIG,
+        url: "wss://<magicdns-host>",
+        note: t("Tailscale Serve requires gateway.bind to stay on loopback."),
+      },
+    ],
+    [t],
+  );
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -179,6 +241,81 @@ export function HelpCenterScreen(): React.JSX.Element {
           {t("Follow these steps to connect Clawket to your OpenClaw.")}
         </Text>
         <QuickConnectGuideCard style={styles.guideCard} />
+      </View>
+
+      <View style={styles.section}>
+        <View style={styles.sectionTitleRow}>
+          <Info size={16} color={theme.colors.textMuted} strokeWidth={2} />
+          <Text style={styles.sectionTitle}>{t("Built-in connection configs")}</Text>
+        </View>
+        <Text style={styles.sectionDesc}>
+          {t(
+            "These examples are based on OpenClaw Gateway docs and config validation. Use the mode that matches how your phone reaches the Gateway.",
+          )}
+        </Text>
+        {builtInConnectionConfigs.map((item, idx) => (
+          <View
+            key={item.title}
+            style={[
+              styles.configGuideCard,
+              idx > 0 && styles.configGuideCardSpaced,
+            ]}
+          >
+            <Text style={styles.configGuideTitle}>{item.title}</Text>
+            <Text style={styles.configGuideText}>{item.description}</Text>
+            <Text style={styles.configGuideLabel}>
+              {t("Minimal openclaw.json example")}
+            </Text>
+            <CopyableCommand command={item.config} multiline />
+            <Text style={styles.configGuideLabel}>{t("App URL")}</Text>
+            <CopyableCommand command={item.url} />
+            {item.note ? (
+              <Text
+                style={[styles.configGuideText, styles.configGuideTextSpaced]}
+              >
+                {item.note}
+              </Text>
+            ) : null}
+          </View>
+        ))}
+        <View style={[styles.infoCard, styles.configGuideCardSpaced]}>
+          <Text style={styles.configGuideTitle}>
+            {t("Control UI / WebChat note")}
+          </Text>
+          <Text style={styles.configGuideText}>
+            {t(
+              "gateway.controlUi.allowedOrigins is only for browser-based Control UI or WebChat on non-loopback addresses. Clawket app connection itself does not depend on this field.",
+            )}
+          </Text>
+          <Text style={[styles.configGuideText, styles.configGuideTextSpaced]}>
+            {t(
+              "If you open Control UI over LAN or direct Tailnet bind, add the exact browser origin you open in Safari or Chrome.",
+            )}
+          </Text>
+          <Text style={styles.configGuideLabel}>
+            {t("LAN / Tailnet browser origin example")}
+          </Text>
+          <CopyableCommand command="http://192.168.1.23:18789" />
+          <Text style={[styles.configGuideText, styles.configGuideTextSpaced]}>
+            {t(
+              "If you open Control UI through Tailscale Serve, the browser origin is your HTTPS MagicDNS host.",
+            )}
+          </Text>
+          <Text style={styles.configGuideLabel}>
+            {t("Tailscale Serve browser origin example")}
+          </Text>
+          <CopyableCommand command="https://your-device.your-tailnet.ts.net" />
+          <Text style={[styles.configGuideText, styles.configGuideTextSpaced]}>
+            {t(
+              "For Tailscale Serve, keep using your Gateway token or password in Clawket. Tailscale identity header auth applies to browser Control UI or WebChat, not app login.",
+            )}
+          </Text>
+          <Text style={styles.configGuideLabel}>{t("Restart Gateway")}</Text>
+          <CopyableCommand command="openclaw gateway restart" />
+          <Text style={[styles.configGuideText, styles.configGuideTextSpaced]}>
+            {t("After changing openclaw.json, restart the Gateway.")}
+          </Text>
+        </View>
       </View>
 
       {/* Section: Troubleshooting */}
@@ -361,6 +498,36 @@ function createStyles(
     },
     guideCard: {
       borderRadius: Radius.md,
+    },
+    configGuideCard: {
+      backgroundColor: colors.surface,
+      borderRadius: Radius.md,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: Space.lg,
+    },
+    configGuideCardSpaced: {
+      marginTop: Space.md,
+    },
+    configGuideTitle: {
+      fontSize: FontSize.base,
+      fontWeight: FontWeight.semibold,
+      color: colors.text,
+    },
+    configGuideText: {
+      fontSize: FontSize.md,
+      color: colors.textMuted,
+      lineHeight: 19,
+      marginTop: Space.xs,
+    },
+    configGuideTextSpaced: {
+      marginTop: Space.sm,
+    },
+    configGuideLabel: {
+      fontSize: FontSize.sm,
+      color: colors.textSubtle,
+      marginTop: Space.md,
+      marginBottom: Space.xs,
     },
     stepsCard: {
       backgroundColor: colors.surface,

@@ -9,7 +9,7 @@ export function getQuickConnectAgentPrompt(
   t: TFunction<'chat', undefined>,
   pairCommand = MANUAL_PAIR_CMD,
 ): string {
-  return t('Please run {{installCommand}}, then run {{pairCommand}}, and send me the generated QR image file.', {
+  return t('Please run {{installCommand}} to install the open-source Clawket CLI, then run {{pairCommand}}, and send me the generated QR image file.', {
     installCommand: MANUAL_INSTALL_CMD,
     pairCommand,
   });

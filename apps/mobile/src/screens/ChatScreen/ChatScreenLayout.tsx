@@ -13,7 +13,7 @@ import { DebugOverlay } from '../../components/chat/DebugOverlay';
 import { PairingPendingCard } from '../../components/chat/PairingPendingCard';
 import { AgentRowData } from '../../components/chat/AgentsModal';
 import { useAppContext } from '../../contexts/AppContext';
-import { pickAvatarImage, saveAgentAvatar, removeAgentAvatar, buildAvatarKey } from '../../services/agent-avatar';
+import { pickAvatarImage, saveAgentAvatar, removeAgentAvatar, buildAvatarKey, readAgentAvatar } from '../../services/agent-avatar';
 import { useShareIntent } from '../../hooks/useShareIntent';
 import { useChatGatewaySwitcher } from '../../hooks/useChatGatewaySwitcher';
 import { useProPaywall } from '../../contexts/ProPaywallContext';
@@ -153,7 +153,7 @@ export function ChatScreenLayout({ controller, insets, onOpenSidebar, onAddGatew
   const currentAgent = agents.find((a) => a.id === currentAgentId);
   const currentAgentName = currentAgent?.identity?.name?.trim() || currentAgent?.name?.trim() || controller.agentDisplayName || null;
   const currentAvatarKey = buildAvatarKey(currentAgentId, currentAgentName ?? undefined);
-  const localAvatar = agentAvatars[currentAvatarKey];
+  const localAvatar = readAgentAvatar(agentAvatars, currentAgent);
   const effectiveAvatarUri = localAvatar ?? controller.agentAvatarUri ?? undefined;
 
   // Canvas WebView panel
@@ -206,8 +206,7 @@ export function ChatScreenLayout({ controller, insets, onOpenSidebar, onAddGatew
             : null;
       }
       if (agent.identity?.avatarUrl) avatarUri = agent.identity.avatarUrl;
-      const agentDisplayName = agent.identity?.name?.trim() || agent.name?.trim() || undefined;
-      const localAv = agentAvatars[buildAvatarKey(agent.id, agentDisplayName)];
+      const localAv = readAgentAvatar(agentAvatars, agent);
       if (localAv) avatarUri = localAv;
 
       if (isCurrent) {

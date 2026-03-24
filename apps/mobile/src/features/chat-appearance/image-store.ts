@@ -3,6 +3,17 @@ import * as FileSystem from 'expo-file-system/legacy';
 
 const CHAT_BACKGROUND_DIR = `${FileSystem.documentDirectory ?? ''}chat-appearance/`;
 
+function normalizeImageName(imagePath?: string | null): string | undefined {
+  if (typeof imagePath !== 'string') return undefined;
+  const trimmed = imagePath.trim();
+  if (!trimmed) return undefined;
+  const withoutQuery = trimmed.split('?')[0]?.split('#')[0] ?? trimmed;
+  const lastSlash = withoutQuery.lastIndexOf('/');
+  const imageName = lastSlash >= 0 ? withoutQuery.slice(lastSlash + 1) : withoutQuery;
+  const normalized = imageName.trim();
+  return normalized || undefined;
+}
+
 function resolveExtension(uri: string, mimeType?: string): string {
   if (mimeType === 'image/png') return 'png';
   if (mimeType === 'image/webp') return 'webp';
@@ -42,7 +53,27 @@ export async function persistChatBackgroundImage(
   return targetUri;
 }
 
+export function toStoredChatBackgroundImagePath(imagePath?: string | null): string | undefined {
+  return normalizeImageName(imagePath);
+}
+
+export function resolveStoredChatBackgroundImagePath(imagePath?: string | null): string | undefined {
+  const imageName = normalizeImageName(imagePath);
+  if (!imageName || !FileSystem.documentDirectory) return undefined;
+  return `${CHAT_BACKGROUND_DIR}${imageName}`;
+}
+
+export async function resolveExistingStoredChatBackgroundImagePath(
+  imagePath?: string | null,
+): Promise<string | undefined> {
+  const resolvedPath = resolveStoredChatBackgroundImagePath(imagePath);
+  if (!resolvedPath) return undefined;
+  const info = await FileSystem.getInfoAsync(resolvedPath);
+  return info.exists ? resolvedPath : undefined;
+}
+
 export async function deletePersistedChatBackgroundImage(imagePath?: string): Promise<void> {
-  if (!imagePath) return;
-  await FileSystem.deleteAsync(imagePath, { idempotent: true }).catch(() => {});
+  const resolvedPath = resolveStoredChatBackgroundImagePath(imagePath) ?? imagePath;
+  if (!resolvedPath) return;
+  await FileSystem.deleteAsync(resolvedPath, { idempotent: true }).catch(() => {});
 }

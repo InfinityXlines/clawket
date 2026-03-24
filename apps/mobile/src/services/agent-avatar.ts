@@ -1,5 +1,7 @@
 import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import type { AgentInfo } from '../types/agent';
+import { resolveAgentDisplayName } from './agent-display-name';
 
 const AVATAR_STORAGE_KEY = 'agent_avatars';
 
@@ -9,6 +11,34 @@ type AvatarMap = Record<string, string>; // avatarKey → base64 data URI
  *  When a name is available the key is "agentId:agentName", otherwise just "agentId". */
 export function buildAvatarKey(agentId: string, agentName?: string): string {
   return agentName ? `${agentId}:${agentName}` : agentId;
+}
+
+function readLegacyAgentAvatarName(agent?: AgentInfo): string | undefined {
+  const identityName = agent?.identity?.name?.trim();
+  if (identityName) return identityName;
+  const configName = agent?.name?.trim();
+  return configName || undefined;
+}
+
+export function resolveAgentAvatarKeyCandidates(agent?: AgentInfo): string[] {
+  const agentId = agent?.id?.trim();
+  if (!agentId) return [];
+
+  const legacyName = readLegacyAgentAvatarName(agent);
+  const displayName = resolveAgentDisplayName(agent);
+  return [...new Set([
+    buildAvatarKey(agentId, legacyName),
+    buildAvatarKey(agentId, displayName),
+    buildAvatarKey(agentId),
+  ])];
+}
+
+export function readAgentAvatar(map: Record<string, string>, agent?: AgentInfo): string | undefined {
+  for (const key of resolveAgentAvatarKeyCandidates(agent)) {
+    const avatar = map[key];
+    if (avatar) return avatar;
+  }
+  return undefined;
 }
 
 /** Load all agent avatar mappings from local storage. */

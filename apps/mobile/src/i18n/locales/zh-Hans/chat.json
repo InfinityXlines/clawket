@@ -18,7 +18,7 @@
   "One connection away from something interesting.": "只差一步连接，精彩即将开始。",
   "Step 1": "第 1 步",
   "Step 2": "第 2 步",
-  "Please run {{installCommand}}, then run {{pairCommand}}, and send me the generated QR image file.": "请先运行 {{installCommand}}，然后运行 {{pairCommand}}，并把生成的二维码图片文件发给我。",
+  "Please run {{installCommand}} to install the open-source Clawket CLI, then run {{pairCommand}}, and send me the generated QR image file.": "请先运行 {{installCommand}} 来安装开源的 Clawket CLI，然后运行 {{pairCommand}}，并把生成的二维码图片文件发给我。",
   "Copy this message to your OpenClaw Agent.": "将这条消息复制给你的 OpenClaw Agent。",
   "Scan the QR code sent by your Agent.": "扫描你的 Agent 发来的二维码。",
   "Having trouble? Try manual setup": "遇到问题？手动连接",

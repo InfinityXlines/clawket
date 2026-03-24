@@ -20,6 +20,10 @@ import {
 import { AccentScale, defaultAccentId, isAccentScale } from '../theme';
 import { DEFAULT_CHAT_APPEARANCE, normalizeChatAppearanceSettings } from '../features/chat-appearance/defaults';
 import {
+  resolveExistingStoredChatBackgroundImagePath,
+  toStoredChatBackgroundImagePath,
+} from '../features/chat-appearance/image-store';
+import {
   DEFAULT_NODE_CAPABILITY_TOGGLES,
   NodeCapabilityToggles,
   normalizeNodeCapabilityToggles,
@@ -800,12 +804,62 @@ export const StorageService = {
   },
 
   async setChatAppearance(settings: ChatAppearanceSettings): Promise<void> {
-    await setJson(KEYS.chatAppearance, normalizeChatAppearanceSettings(settings));
+    const normalized = normalizeChatAppearanceSettings(settings);
+    const storedImagePath = normalized.background.enabled
+      ? toStoredChatBackgroundImagePath(normalized.background.imagePath)
+      : undefined;
+    await setJson(KEYS.chatAppearance, {
+      ...normalized,
+      background: {
+        ...normalized.background,
+        enabled: Boolean(storedImagePath) && normalized.background.enabled,
+        imagePath: storedImagePath,
+      },
+    });
   },
 
   async getChatAppearance(): Promise<ChatAppearanceSettings> {
     const parsed = await getJson<unknown>(KEYS.chatAppearance);
-    return parsed ? normalizeChatAppearanceSettings(parsed) : DEFAULT_CHAT_APPEARANCE;
+    const normalized = parsed ? normalizeChatAppearanceSettings(parsed) : DEFAULT_CHAT_APPEARANCE;
+    if (!normalized.background.enabled || !normalized.background.imagePath) {
+      return normalized;
+    }
+
+    const storedImagePath = toStoredChatBackgroundImagePath(normalized.background.imagePath);
+    const resolvedImagePath = await resolveExistingStoredChatBackgroundImagePath(storedImagePath);
+
+    if (!storedImagePath || !resolvedImagePath) {
+      const repairedAppearance: ChatAppearanceSettings = {
+        ...normalized,
+        background: {
+          ...normalized.background,
+          enabled: false,
+          imagePath: undefined,
+        },
+      };
+      if (parsed) {
+        await setJson(KEYS.chatAppearance, repairedAppearance);
+      }
+      return repairedAppearance;
+    }
+
+    if (storedImagePath !== normalized.background.imagePath) {
+      await setJson(KEYS.chatAppearance, {
+        ...normalized,
+        background: {
+          ...normalized.background,
+          imagePath: storedImagePath,
+        },
+      });
+    }
+
+    return {
+      ...normalized,
+      background: {
+        ...normalized.background,
+        imagePath: resolvedImagePath,
+      },
+    };
   },
 
   async setSpeechRecognitionLanguage(language: SpeechRecognitionLanguage): Promise<void> {

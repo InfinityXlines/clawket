@@ -1,4 +1,5 @@
 import * as SecureStore from 'expo-secure-store';
+import * as FileSystem from 'expo-file-system/legacy';
 
 jest.mock('../theme', () => ({
   defaultAccentId: 'iceBlue',
@@ -9,10 +10,12 @@ import { StorageService } from './storage';
 
 const mockGetItemAsync = SecureStore.getItemAsync as jest.Mock;
 const mockSetItemAsync = SecureStore.setItemAsync as jest.Mock;
+const mockGetInfoAsync = FileSystem.getInfoAsync as jest.Mock;
 
 describe('StorageService chat appearance', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockGetInfoAsync.mockResolvedValue({ exists: true });
   });
 
   it('returns the default chat appearance when nothing has been saved', async () => {
@@ -88,7 +91,7 @@ describe('StorageService chat appearance', () => {
         version: 1,
         background: {
           enabled: true,
-          imagePath: 'file:///wallpaper.jpg',
+          imagePath: 'wallpaper.jpg',
           blur: 24,
           dim: 0,
           fillMode: 'cover',
@@ -107,7 +110,7 @@ describe('StorageService chat appearance', () => {
       version: 1,
       background: {
         enabled: true,
-        imagePath: 'file:///wallpaper.jpg',
+        imagePath: 'file:///documents/chat-appearance/wallpaper.jpg',
         blur: 8,
         dim: 0.28,
         fillMode: 'contain',
@@ -122,7 +125,7 @@ describe('StorageService chat appearance', () => {
       version: 1,
       background: {
         enabled: true,
-        imagePath: 'file:///wallpaper.jpg',
+        imagePath: 'file:///documents/chat-appearance/wallpaper.jpg',
         blur: 8,
         dim: 0,
         fillMode: 'cover',
@@ -132,5 +135,76 @@ describe('StorageService chat appearance', () => {
         opacity: 0.9,
       },
     });
+
+    expect(mockSetItemAsync).toHaveBeenCalledWith(
+      'clawket.chatAppearance.v1',
+      JSON.stringify({
+        version: 1,
+        background: {
+          enabled: true,
+          imagePath: 'wallpaper.jpg',
+          blur: 8,
+          dim: 0,
+          fillMode: 'cover',
+        },
+        bubbles: {
+          style: 'soft',
+          opacity: 0.9,
+        },
+      }),
+      expect.any(Object),
+    );
+  });
+
+  it('disables the wallpaper when the persisted file is missing', async () => {
+    mockGetInfoAsync.mockResolvedValueOnce({ exists: false });
+    mockGetItemAsync.mockResolvedValueOnce(JSON.stringify({
+      version: 1,
+      background: {
+        enabled: true,
+        imagePath: 'wallpaper.jpg',
+        blur: 8,
+        dim: 0,
+        fillMode: 'cover',
+      },
+      bubbles: {
+        style: 'soft',
+        opacity: 0.9,
+      },
+    }));
+
+    await expect(StorageService.getChatAppearance()).resolves.toEqual({
+      version: 1,
+      background: {
+        enabled: false,
+        imagePath: undefined,
+        blur: 8,
+        dim: 0,
+        fillMode: 'cover',
+      },
+      bubbles: {
+        style: 'soft',
+        opacity: 0.9,
+      },
+    });
+
+    expect(mockSetItemAsync).toHaveBeenCalledWith(
+      'clawket.chatAppearance.v1',
+      JSON.stringify({
+        version: 1,
+        background: {
+          enabled: false,
+          imagePath: undefined,
+          blur: 8,
+          dim: 0,
+          fillMode: 'cover',
+        },
+        bubbles: {
+          style: 'soft',
+          opacity: 0.9,
+        },
+      }),
+      expect.any(Object),
+    );
   });
 });

@@ -12,7 +12,7 @@ import { useAppContext } from '../../contexts/AppContext';
 import { useConnectionState } from '../../hooks/useConnectionState';
 import { logAppTelemetry } from '../../services/app-telemetry';
 import { analyticsEvents } from '../../services/analytics/events';
-import { buildAvatarKey } from '../../services/agent-avatar';
+import { readAgentAvatar } from '../../services/agent-avatar';
 import { StorageService } from '../../services/storage';
 import { formatConsoleHeartbeatAge } from '../../utils/console-heartbeat';
 import { parseGatewayRuntimeSettings } from '../../utils/gateway-settings';
@@ -516,9 +516,7 @@ export function ConsoleMenuScreen(): React.JSX.Element {
   const [posterVisible, setPosterVisible] = useState(false);
   const posterAvatarUri = useMemo(() => {
     const agent = agents.find((a) => a.id === currentAgentId);
-    const agentName = agent?.identity?.name?.trim() || agent?.name?.trim();
-    const avatarKey = buildAvatarKey(currentAgentId, agentName ?? undefined);
-    const localAvatar = agentAvatars[avatarKey];
+    const localAvatar = readAgentAvatar(agentAvatars, agent);
     if (localAvatar) return localAvatar;
     const remoteAvatar = agent?.identity?.avatar;
     if (!remoteAvatar) return undefined;

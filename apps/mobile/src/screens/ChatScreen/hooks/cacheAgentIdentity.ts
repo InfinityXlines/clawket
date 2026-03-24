@@ -1,3 +1,4 @@
+import { resolveAgentDisplayName } from "../../../services/agent-display-name";
 import type { AgentInfo } from "../../../types/agent";
 import { agentIdFromSessionKey } from "./agentActivity";
 
@@ -8,8 +9,7 @@ export type CachedAgentIdentity = {
 };
 
 function readAgentName(agent?: AgentInfo): string | undefined {
-  const name = agent?.identity?.name?.trim() || agent?.name?.trim();
-  return name || undefined;
+  return resolveAgentDisplayName(agent);
 }
 
 export function resolveCachedAgentIdentity(

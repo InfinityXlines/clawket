@@ -18,7 +18,7 @@
   "One connection away from something interesting.": "接続するだけで面白いことが始まります。",
   "Step 1": "ステップ 1",
   "Step 2": "ステップ 2",
-  "Please run {{installCommand}}, then run {{pairCommand}}, and send me the generated QR image file.": "まず {{installCommand}} を実行し、次に {{pairCommand}} を実行して、生成された QR 画像ファイルを送ってください。",
+  "Please run {{installCommand}} to install the open-source Clawket CLI, then run {{pairCommand}}, and send me the generated QR image file.": "まず {{installCommand}} を実行してオープンソースの Clawket CLI をインストールし、次に {{pairCommand}} を実行して、生成された QR 画像ファイルを送ってください。",
   "Copy this message to your OpenClaw Agent.": "このメッセージを OpenClaw Agent にコピーしてください。",
   "Scan the QR code sent by your Agent.": "Agent から送られた QR コードをスキャンしてください。",
   "Having trouble? Try manual setup": "うまくいかない場合は手動接続",

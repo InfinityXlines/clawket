@@ -181,6 +181,7 @@ export function AgentsModal({
       <BottomSheetModal
         ref={bottomSheetRef}
         enablePanDownToClose
+        enableDynamicSizing={false}
         snapPoints={snapPoints}
         topInset={insets.top}
         onDismiss={handleDismiss}

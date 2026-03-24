@@ -18,7 +18,7 @@
   "One connection away from something interesting.": "연결 하나면 흥미로운 일이 시작됩니다.",
   "Step 1": "1단계",
   "Step 2": "2단계",
-  "Please run {{installCommand}}, then run {{pairCommand}}, and send me the generated QR image file.": "먼저 {{installCommand}} 를 실행한 다음 {{pairCommand}} 를 실행하고, 생성된 QR 이미지 파일을 보내 주세요.",
+  "Please run {{installCommand}} to install the open-source Clawket CLI, then run {{pairCommand}}, and send me the generated QR image file.": "먼저 {{installCommand}} 를 실행해 오픈 소스 Clawket CLI를 설치한 다음 {{pairCommand}} 를 실행하고, 생성된 QR 이미지 파일을 보내 주세요.",
   "Copy this message to your OpenClaw Agent.": "이 메시지를 OpenClaw Agent에게 복사하세요.",
   "Scan the QR code sent by your Agent.": "Agent가 보낸 QR 코드를 스캔하세요.",
   "Having trouble? Try manual setup": "문제가 있나요? 수동 연결",

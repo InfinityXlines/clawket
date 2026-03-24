@@ -22,6 +22,7 @@ import { useAppContext } from '../../contexts/AppContext';
 import { useProPaywall } from '../../contexts/ProPaywallContext';
 import { useNativeStackModalHeader } from '../../hooks/useNativeStackModalHeader';
 import { analyticsEvents } from '../../services/analytics/events';
+import { resolveAgentDisplayName } from '../../services/agent-display-name';
 import { useAppTheme } from '../../theme';
 import { FontSize, FontWeight, Radius, Space } from '../../theme/tokens';
 import type { AgentInfo } from '../../types/agent';
@@ -159,7 +160,7 @@ export function AgentListScreen(): React.JSX.Element {
   const renderItem = ({ item }: { item: AgentInfo }) => {
     const isCurrent = item.id === currentAgentId;
     const isMain = item.id === mainKey;
-    const displayName = item.identity?.name || item.name || item.id;
+    const displayName = resolveAgentDisplayName(item) ?? item.id;
     const emoji = item.identity?.emoji || '🤖';
 
     return (

@@ -18,7 +18,7 @@
   "One connection away from something interesting.": "A una conexión de algo interesante.",
   "Step 1": "Paso 1",
   "Step 2": "Paso 2",
-  "Please run {{installCommand}}, then run {{pairCommand}}, and send me the generated QR image file.": "Primero ejecuta {{installCommand}}, luego ejecuta {{pairCommand}} y envíame el archivo de imagen QR generado.",
+  "Please run {{installCommand}} to install the open-source Clawket CLI, then run {{pairCommand}}, and send me the generated QR image file.": "Primero ejecuta {{installCommand}} para instalar la CLI de Clawket de código abierto, luego ejecuta {{pairCommand}} y envíame el archivo de imagen QR generado.",
   "Copy this message to your OpenClaw Agent.": "Copia este mensaje para tu agente de OpenClaw.",
   "Scan the QR code sent by your Agent.": "Escanea el código QR que te envió tu agente.",
   "Having trouble? Try manual setup": "¿Tienes problemas? Conexión manual",
