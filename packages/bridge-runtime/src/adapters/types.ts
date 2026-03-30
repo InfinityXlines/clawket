@@ -77,15 +77,36 @@ export type ResFrame = {
   type: 'res';
   id: string;
   ok: boolean;
-  data?: unknown;
+  payload?: unknown;
   error?: { code: string; message: string };
 };
+
+export type EventFrame = {
+  type: 'event';
+  event: string;
+  payload?: unknown;
+  seq?: number;
+  stateVersion?: { presence: number; health: number };
+};
+
+export type GatewayFrame = ResFrame | EventFrame;
+
+export type PassthroughResult = {
+  kind: 'passthrough';
+  frame: ReqFrame;
+};
+
+export type AdapterRpcResult = ResFrame | PassthroughResult;
 
 // ── Backend adapter interface ──
 
 export type BackendHealth = {
   backend: BackendType;
+  displayName: string;
+  ok: boolean;
   healthy: boolean;
+  latencyMs: number;
+  checkedAtMs: number;
   agentCount: number;
   error?: string;
 };
@@ -106,17 +127,19 @@ export interface BackendAdapter extends EventEmitter {
 
   listSessions(localId: string): Promise<Session[]>;
   createSession(localId: string): Promise<Session>;
+  canHandleSession(sessionKey: string): Promise<boolean>;
 
   getConfig(localId: string): Promise<Record<string, unknown>>;
   patchConfig(localId: string, patch: Record<string, unknown>): Promise<void>;
 
   /**
    * Handle an RPC frame targeted at this backend.
-   * Returns a ResFrame to send back to mobile, or null to signal
-   * "passthrough to the default gateway WebSocket."
+   * Returns a ResFrame to send back to mobile, or a passthrough result
+   * for frames that should continue to the default gateway WebSocket.
    */
-  handleRpc(frame: ReqFrame): Promise<ResFrame | null>;
+  handleRpc(frame: ReqFrame): Promise<AdapterRpcResult>;
 
+  on(event: 'frame', listener: (frame: GatewayFrame) => void): this;
   on(event: 'agent-status-changed', listener: (agent: UnifiedAgent) => void): this;
   on(event: 'agent-discovered', listener: (agent: UnifiedAgent) => void): this;
   on(event: 'agent-removed', listener: (agentId: string) => void): this;
@@ -132,4 +155,8 @@ export function parseAgentId(compositeId: string): { backend: BackendType; local
   const backend = compositeId.slice(0, colonIndex) as BackendType;
   if (backend !== 'openclaw' && backend !== 'claude-code' && backend !== 'hermes') return null;
   return { backend, localId: compositeId.slice(colonIndex + 1) };
+}
+
+export function isPassthroughResult(result: AdapterRpcResult): result is PassthroughResult {
+  return 'kind' in result && result.kind === 'passthrough';
 }

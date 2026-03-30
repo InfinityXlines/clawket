@@ -24,7 +24,17 @@ import {
   isGatewayFrame,
   isResFrame,
 } from '../types';
-import type { AgentInfo, AgentsListResult, AgentCreateResult, AgentUpdateResult, AgentDeleteResult } from '../types/agent';
+import type {
+  AgentCapability,
+  AgentInfo,
+  AgentStatus,
+  AgentsListResult,
+  AgentCreateResult,
+  AgentUpdateResult,
+  AgentDeleteResult,
+  BackendHealth,
+  BackendType,
+} from '../types/agent';
 import type { CostSummary, UsageResult } from '../types/usage';
 import type { ToolsCatalogResult } from '../types/index';
 import type { NodeInvokeRequest, CanvasPresentPayload, CanvasNavigatePayload, CanvasEvalPayload, CanvasSnapshotPayload } from '../types/canvas';
@@ -109,6 +119,77 @@ import { getRuntimeClientId, getRuntimeDeviceFamily, getRuntimePlatform } from '
 
 export { extractText };
 export type { ChatHistoryResult, GatewayInfo };
+
+function normalizeBackendType(value: unknown): BackendType | undefined {
+  return value === 'openclaw' || value === 'claude-code' || value === 'hermes' ? value : undefined;
+}
+
+function normalizeAgentStatus(value: unknown): AgentStatus | undefined {
+  return value === 'online' || value === 'offline' || value === 'busy' ? value : undefined;
+}
+
+function normalizeAgentCapabilities(value: unknown): AgentCapability[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const capabilities = value.filter((item): item is AgentCapability => (
+    item === 'chat'
+    || item === 'file-management'
+    || item === 'skill-management'
+    || item === 'cron-scheduling'
+    || item === 'config-editing'
+    || item === 'session-history'
+  ));
+  return capabilities.length > 0 ? capabilities : undefined;
+}
+
+function deriveLocalAgentId(id: string, backend?: BackendType): string | undefined {
+  if (!backend) return undefined;
+  const prefix = `${backend}:`;
+  return id.startsWith(prefix) ? id.slice(prefix.length) : undefined;
+}
+
+function normalizeAgentInfo(value: unknown): AgentInfo | null {
+  if (!value || typeof value !== 'object') return null;
+  const entry = value as Record<string, unknown>;
+  const id = typeof entry.id === 'string' ? entry.id : null;
+  if (!id) return null;
+  const backend = normalizeBackendType(entry.backend);
+  const identity = entry.identity && typeof entry.identity === 'object'
+    ? entry.identity as Record<string, unknown>
+    : null;
+
+  return {
+    id,
+    localId: typeof entry.localId === 'string' ? entry.localId : deriveLocalAgentId(id, backend),
+    name: typeof entry.name === 'string' ? entry.name : undefined,
+    backend,
+    model: typeof entry.model === 'string' ? entry.model : undefined,
+    status: normalizeAgentStatus(entry.status),
+    capabilities: normalizeAgentCapabilities(entry.capabilities),
+    identity: identity ? {
+      name: typeof identity.name === 'string' ? identity.name : undefined,
+      emoji: typeof identity.emoji === 'string' ? identity.emoji : undefined,
+      avatar: typeof identity.avatar === 'string' ? identity.avatar : undefined,
+      avatarUrl: typeof identity.avatarUrl === 'string' ? identity.avatarUrl : undefined,
+    } : undefined,
+  };
+}
+
+function normalizeBackendHealth(value: unknown): BackendHealth | null {
+  if (!value || typeof value !== 'object') return null;
+  const entry = value as Record<string, unknown>;
+  const backend = normalizeBackendType(entry.backend);
+  if (!backend) return null;
+  return {
+    backend,
+    displayName: typeof entry.displayName === 'string' ? entry.displayName : backend,
+    ok: entry.ok === true,
+    healthy: entry.healthy === true || entry.ok === true,
+    latencyMs: typeof entry.latencyMs === 'number' ? entry.latencyMs : 0,
+    checkedAtMs: typeof entry.checkedAtMs === 'number' ? entry.checkedAtMs : Date.now(),
+    agentCount: typeof entry.agentCount === 'number' ? entry.agentCount : 0,
+    error: typeof entry.error === 'string' ? entry.error : undefined,
+  };
+}
 
 // ---- GatewayClient ----
 
@@ -1047,7 +1128,14 @@ export class GatewayClient {
     this.pendingAgentsListRequest = (async () => {
       try {
         const payload = await this.sendRequest('agents.list', {});
-        const result = (payload as AgentsListResult | null) ?? { defaultId: 'main', mainKey: 'main', agents: [] };
+        const raw = (payload as AgentsListResult | null) ?? { defaultId: 'main', mainKey: 'main', agents: [] };
+        const result: AgentsListResult = {
+          defaultId: typeof raw.defaultId === 'string' ? raw.defaultId : 'main',
+          mainKey: typeof raw.mainKey === 'string' ? raw.mainKey : 'main',
+          agents: Array.isArray(raw.agents)
+            ? raw.agents.map(normalizeAgentInfo).filter((agent): agent is AgentInfo => agent != null)
+            : [],
+        };
         this.agentsListCache = {
           value: result,
           expiresAt: Date.now() + AGENT_LIST_CACHE_TTL_MS,
@@ -1061,6 +1149,17 @@ export class GatewayClient {
     })();
 
     return this.pendingAgentsListRequest;
+  }
+
+  public async getBackendHealth(): Promise<BackendHealth[]> {
+    const payload = await this.sendRequest('backends.health', {}) as
+      | { backends?: unknown[] }
+      | null;
+    return Array.isArray(payload?.backends)
+      ? payload.backends
+          .map(normalizeBackendHealth)
+          .filter((entry): entry is BackendHealth => entry != null)
+      : [];
   }
 
 

@@ -60,8 +60,20 @@ describe('UnifiedAgentRegistry', () => {
     const registry = new UnifiedAgentRegistry([oc, cc]);
     const health = await registry.healthCheck();
     expect(health).toHaveLength(2);
-    expect(health.find(h => h.backend === 'openclaw')?.healthy).toBe(true);
-    expect(health.find(h => h.backend === 'claude-code')?.healthy).toBe(false);
+    expect(health.find(h => h.backend === 'openclaw')).toEqual(
+      expect.objectContaining({
+        healthy: true,
+        ok: true,
+        agentCount: 1,
+      }),
+    );
+    expect(health.find(h => h.backend === 'claude-code')).toEqual(
+      expect.objectContaining({
+        healthy: false,
+        ok: false,
+        agentCount: 0,
+      }),
+    );
   });
 
   it('tolerates adapter failures in listAllAgents', async () => {

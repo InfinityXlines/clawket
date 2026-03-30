@@ -5,6 +5,22 @@
 **Status:** DRAFT — awaiting L'Mont approval
 **Repo:** InfinityXlines/clawket (fork)
 
+## Implementation Note — 2026-03-30
+
+Phase 2 now has a working bridge-runtime implementation in `packages/bridge-runtime` and `apps/bridge-cli`.
+
+- The bridge runtime now uses the mobile app's real response shape: `res.payload`, not `res.data`.
+- `agents.list` is aggregated in the dispatcher instead of passthrough-only, with OpenClaw agents read from `~/.openclaw/openclaw.json`.
+- OpenClaw passthrough rewrites composite IDs like `openclaw:simone` back to backend-local IDs before forwarding to the gateway.
+- The Claude Code adapter is implemented with real `claude -p` / `claude -r` `stream-json` runs, agent discovery from `~/agents` plus `crew-ctl.sh status`, and chat history from `~/.claude/projects/.../*.jsonl`.
+- Verified Claude-backed RPC coverage today: `agents.list`, `agent.identity.get`, `chat.send`, `chat.history`, and `chat.abort`.
+
+Known Phase 2 deferrals:
+
+- No aggregated `sessions.list` merge with live OpenClaw gateway sessions yet. Claude session listing exists in the adapter, but bridge-level session fan-out is still future work.
+- Claude tool-event translation is still minimal compared with native OpenClaw events.
+- The original session-pool / watchdog / LRU design was not implemented because the local Claude CLI already supports resumable one-shot runs via `session_id`; current code uses that simpler path first.
+
 ---
 
 ## Problem

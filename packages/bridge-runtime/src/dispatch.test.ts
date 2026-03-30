@@ -36,14 +36,44 @@ describe('RpcDispatcher', () => {
     });
   });
 
-  it('passthroughs agents.list in Phase 1 (returns null)', async () => {
+  it('aggregates agents.list into a gateway payload', async () => {
     const oc = createMockAdapter('openclaw');
     const registry = new UnifiedAgentRegistry([oc]);
     const dispatcher = new RpcDispatcher(registry);
     const result = await dispatcher.dispatch({
       type: 'req', id: '1', method: 'agents.list',
     });
-    expect(result).toBeNull();
+    expect('type' in result && result.type === 'res').toBe(true);
+    if ('type' in result && result.type === 'res') {
+      expect(result.payload).toEqual({
+        defaultId: 'main',
+        mainKey: 'main',
+        agents: [],
+      });
+    }
+  });
+
+  it('aggregates backends.health into a gateway payload', async () => {
+    const oc = createMockAdapter('openclaw');
+    const registry = new UnifiedAgentRegistry([oc]);
+    const dispatcher = new RpcDispatcher(registry);
+    const result = await dispatcher.dispatch({
+      type: 'req', id: 'health-1', method: 'backends.health',
+    });
+    expect('type' in result && result.type === 'res').toBe(true);
+    if ('type' in result && result.type === 'res') {
+      expect(result.payload).toMatchObject({
+        backends: [
+          expect.objectContaining({
+            backend: 'openclaw',
+            displayName: 'openclaw',
+            ok: true,
+            healthy: true,
+            agentCount: 0,
+          }),
+        ],
+      });
+    }
   });
 
   it('routes agent-scoped RPCs to correct adapter by composite agentId', async () => {
@@ -59,14 +89,37 @@ describe('RpcDispatcher', () => {
     expect(oc.handleRpc).not.toHaveBeenCalled();
   });
 
-  it('returns null for RPCs without agentId (passthrough to gateway)', async () => {
+  it('returns a passthrough result for RPCs without agentId', async () => {
     const oc = createMockAdapter('openclaw');
+    (oc.handleRpc as ReturnType<typeof import('vitest')['vi']['fn']>).mockResolvedValue({
+      kind: 'passthrough',
+      frame: { type: 'req', id: '3', method: 'some.unroutable.method' },
+    });
     const registry = new UnifiedAgentRegistry([oc]);
     const dispatcher = new RpcDispatcher(registry);
     const result = await dispatcher.dispatch({
       type: 'req', id: '3', method: 'some.unroutable.method',
     });
-    expect(result).toBeNull();
+    expect(result).toEqual({
+      kind: 'passthrough',
+      frame: { type: 'req', id: '3', method: 'some.unroutable.method' },
+    });
+  });
+
+  it('routes session-scoped Claude Code RPCs by sessionKey prefix', async () => {
+    const oc = createMockAdapter('openclaw');
+    const cc = createMockAdapter('claude-code');
+    (cc.canHandleSession as ReturnType<typeof import('vitest')['vi']['fn']>).mockResolvedValue(true);
+    const registry = new UnifiedAgentRegistry([oc, cc]);
+    const dispatcher = new RpcDispatcher(registry);
+    await dispatcher.dispatch({
+      type: 'req',
+      id: 'session-1',
+      method: 'chat.send',
+      params: { sessionKey: 'agent:claude-code:jade:main', message: 'hello' },
+    });
+    expect(cc.handleRpc).toHaveBeenCalled();
+    expect(oc.handleRpc).not.toHaveBeenCalled();
   });
 
   it('returns error ResFrame when adapter not found for agentId', async () => {

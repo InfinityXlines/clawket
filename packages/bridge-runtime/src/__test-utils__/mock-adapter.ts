@@ -20,8 +20,9 @@ export function createMockAdapter(
     sendMessage: vi.fn(),
     listSessions: vi.fn().mockResolvedValue([]),
     createSession: vi.fn(),
+    canHandleSession: vi.fn().mockResolvedValue(false),
     getConfig: vi.fn().mockResolvedValue({}),
     patchConfig: vi.fn().mockResolvedValue(undefined),
-    handleRpc: vi.fn().mockResolvedValue({ type: 'res', id: '1', ok: true, data: { routed: true } }),
+    handleRpc: vi.fn().mockResolvedValue({ type: 'res', id: '1', ok: true, payload: { routed: true } }),
   }) as unknown as BackendAdapter;
 }

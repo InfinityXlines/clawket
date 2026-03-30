@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   DEVICE_BOOTSTRAP_TOKEN_TTL_MS,
   configureOpenClawLanAccess,
@@ -46,6 +46,14 @@ vi.mock('node:fs/promises', () => fsPromisesMock);
 vi.mock('node:os', () => osMock);
 
 describe('openclaw auth resolution', () => {
+  beforeEach(() => {
+    vi.stubEnv('OPENCLAW_GATEWAY_PORT', '');
+    vi.stubEnv('OPENCLAW_GATEWAY_TOKEN', '');
+    vi.stubEnv('OPENCLAW_GATEWAY_PASSWORD', '');
+    vi.stubEnv('OPENCLAW_CONFIG_PATH', '');
+    vi.stubEnv('OPENCLAW_STATE_DIR', '');
+  });
+
   afterEach(() => {
     vi.unstubAllEnvs();
     vi.clearAllMocks();

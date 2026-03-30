@@ -55,16 +55,44 @@ export class UnifiedAgentRegistry {
     return this.adaptersByType.get(type);
   }
 
+  listAdapters(): BackendAdapter[] {
+    return [...this.adaptersByType.values()];
+  }
+
+  async findAdapterForSession(sessionKey: string): Promise<BackendAdapter | null> {
+    for (const adapter of this.adaptersByType.values()) {
+      if (await adapter.canHandleSession(sessionKey)) {
+        return adapter;
+      }
+    }
+    return null;
+  }
+
   async healthCheck(): Promise<BackendHealth[]> {
     const checks = [...this.adaptersByType.entries()].map(async ([type, adapter]) => {
+      const startedAt = Date.now();
       try {
         const healthy = await adapter.isHealthy();
+        const checkedAtMs = Date.now();
         const agents = healthy ? await adapter.listAgents() : [];
-        return { backend: type, healthy, agentCount: agents.length };
-      } catch (error) {
         return {
           backend: type,
+          displayName: adapter.displayName,
+          ok: healthy,
+          healthy,
+          latencyMs: Math.max(0, checkedAtMs - startedAt),
+          checkedAtMs,
+          agentCount: agents.length,
+        };
+      } catch (error) {
+        const checkedAtMs = Date.now();
+        return {
+          backend: type,
+          displayName: adapter.displayName,
+          ok: false,
           healthy: false,
+          latencyMs: Math.max(0, checkedAtMs - startedAt),
+          checkedAtMs,
           agentCount: 0,
           error: error instanceof Error ? error.message : String(error),
         };

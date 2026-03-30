@@ -2,6 +2,12 @@ import { describe, expect, it, vi } from 'vitest';
 import { OpenClawAdapter } from './openclaw-adapter.js';
 import type { ReqFrame } from './types.js';
 
+const fsMock = vi.hoisted(() => ({
+  existsSync: vi.fn(),
+  readFileSync: vi.fn(),
+}));
+
+vi.mock('node:fs', () => fsMock);
 vi.mock('../openclaw.js', () => ({
   readOpenClawInfo: vi.fn().mockReturnValue({
     configFound: true,
@@ -11,6 +17,7 @@ vi.mock('../openclaw.js', () => ({
     password: null,
   }),
   resolveGatewayUrl: vi.fn().mockReturnValue('ws://127.0.0.1:18789'),
+  getOpenClawConfigPath: vi.fn().mockReturnValue('/Users/tester/.openclaw/openclaw.json'),
 }));
 
 describe('OpenClawAdapter', () => {
@@ -32,7 +39,7 @@ describe('OpenClawAdapter', () => {
     expect(healthy).toBe(true);
   });
 
-  it('handleRpc returns null (null-passthrough contract)', async () => {
+  it('handleRpc returns a passthrough frame with stripped OpenClaw agent ids', async () => {
     const adapter = new OpenClawAdapter();
     const frame: ReqFrame = {
       type: 'req',
@@ -41,13 +48,47 @@ describe('OpenClawAdapter', () => {
       params: { agentId: 'openclaw:simone', message: 'hello' },
     };
     const result = await adapter.handleRpc(frame);
-    expect(result).toBeNull();
+    expect(result).toEqual({
+      kind: 'passthrough',
+      frame: {
+        type: 'req',
+        id: '1',
+        method: 'chat.send',
+        params: { agentId: 'simone', message: 'hello' },
+      },
+    });
   });
 
-  it('listAgents returns empty array (gateway WS handles this)', async () => {
+  it('listAgents reads configured OpenClaw agents from disk', async () => {
+    fsMock.existsSync.mockReturnValue(true);
+    fsMock.readFileSync.mockReturnValue(JSON.stringify({
+      agents: {
+        list: [
+          { id: 'simone', name: 'Simone', emoji: 'S', model: 'gpt-5.4' },
+        ],
+      },
+    }));
     const adapter = new OpenClawAdapter();
     const agents = await adapter.listAgents();
-    expect(agents).toEqual([]);
+    expect(agents).toEqual([
+      {
+        id: 'openclaw:simone',
+        localId: 'simone',
+        backend: 'openclaw',
+        name: 'Simone',
+        model: 'gpt-5.4',
+        emoji: 'S',
+        status: 'online',
+        capabilities: [
+          'chat',
+          'file-management',
+          'skill-management',
+          'cron-scheduling',
+          'config-editing',
+          'session-history',
+        ],
+      },
+    ]);
   });
 
   it('getGatewayUrl returns resolved URL', () => {

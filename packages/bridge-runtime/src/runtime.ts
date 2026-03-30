@@ -21,6 +21,7 @@ import {
   parseResponseEnvelopeMeta,
   type PendingPairRequest,
 } from './protocol.js';
+import { isPassthroughResult } from './adapters/types.js';
 
 type PendingGatewayMessage =
   | { kind: 'text'; text: string }
@@ -131,6 +132,12 @@ export class BridgeRuntime {
       lastError: null,
       lastUpdatedMs: Date.now(),
     };
+
+    if (options.dispatcher) {
+      options.dispatcher.on('frame', (frame) => {
+        this.sendToRelay(JSON.stringify(frame));
+      });
+    }
   }
 
   start(): void {
@@ -273,12 +280,14 @@ export class BridgeRuntime {
       const frame = this.options.dispatcher.tryParseReq(text);
       if (frame) {
         const result = await this.options.dispatcher.dispatch(frame);
-        if (result !== null) {
-          // Dispatcher handled it — send response back to relay (mobile)
+        if (isPassthroughResult(result)) {
+          this.forwardOrQueueGatewayMessage({ kind: 'text', text: JSON.stringify(result.frame) });
+          return;
+        }
+        if (result.type === 'res') {
           this.sendToRelay(JSON.stringify(result));
           return;
         }
-        // result === null means passthrough to gateway
       }
     }
 
