@@ -33,6 +33,8 @@ import {
 } from '@clawket/bridge-core';
 import {
   BridgeRuntime,
+  ClaudeCodeAdapter,
+  HermesAdapter,
   OpenClawAdapter,
   RpcDispatcher,
   UnifiedAgentRegistry,
@@ -313,7 +315,10 @@ async function main(): Promise<void> {
     }
 
     const openclawAdapter = new OpenClawAdapter();
-    const registry = new UnifiedAgentRegistry([openclawAdapter]);
+    const claudeCodeAdapter = new ClaudeCodeAdapter();
+    const hermesAdapter = new HermesAdapter();
+    await Promise.all([openclawAdapter.connect(), claudeCodeAdapter.connect(), hermesAdapter.connect()]);
+    const registry = new UnifiedAgentRegistry([openclawAdapter, claudeCodeAdapter, hermesAdapter]);
     const dispatcher = new RpcDispatcher(registry);
 
     const runtime = new BridgeRuntime({
