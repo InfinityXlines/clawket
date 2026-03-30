@@ -33,6 +33,9 @@ import {
 } from '@clawket/bridge-core';
 import {
   BridgeRuntime,
+  OpenClawAdapter,
+  RpcDispatcher,
+  UnifiedAgentRegistry,
   configureOpenClawLanAccess,
   resolveGatewayAuth,
   resolveGatewayUrl,
@@ -309,9 +312,14 @@ async function main(): Promise<void> {
       writeServiceState();
     }
 
+    const openclawAdapter = new OpenClawAdapter();
+    const registry = new UnifiedAgentRegistry([openclawAdapter]);
+    const dispatcher = new RpcDispatcher(registry);
+
     const runtime = new BridgeRuntime({
       config,
       gatewayUrl,
+      dispatcher,
       onLog: (line) => {
         emitRuntimeLine(`[clawket] ${line}`);
       },
