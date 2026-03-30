@@ -10,6 +10,7 @@ import {
   runOpenClawDoctorFix,
   type OpenClawInfo,
 } from './openclaw.js';
+import type { RpcDispatcher } from './dispatch.js';
 import {
   isConnectHandshakeRequest,
   parseConnectHandshakeMeta,
@@ -69,6 +70,7 @@ export type BridgeRuntimeOptions = {
   heartbeatIntervalMs?: number;
   heartbeatTimeoutMs?: number;
   connectHandshakeWarnDelayMs?: number;
+  dispatcher?: RpcDispatcher;
   createWebSocket?: (url: string, options?: RuntimeSocketConnectOptions) => RuntimeSocket;
   onStatus?: (snapshot: BridgeRuntimeSnapshot) => void;
   onLog?: (line: string) => void;
@@ -265,6 +267,21 @@ export class BridgeRuntime {
       await this.handleRelayControl(control);
       return;
     }
+
+    // Multi-backend dispatch: try routing via dispatcher before gateway passthrough
+    if (this.options.dispatcher) {
+      const frame = this.options.dispatcher.tryParseReq(text);
+      if (frame) {
+        const result = await this.options.dispatcher.dispatch(frame);
+        if (result !== null) {
+          // Dispatcher handled it — send response back to relay (mobile)
+          this.sendToRelay(JSON.stringify(result));
+          return;
+        }
+        // result === null means passthrough to gateway
+      }
+    }
+
     const identity = parseConnectStartIdentity(text);
     if (identity) {
       this.observeConnectStart(identity.id, identity.label);
@@ -640,6 +657,12 @@ export class BridgeRuntime {
       }
       this.scheduleGatewayReconnect();
     });
+  }
+
+  private sendToRelay(text: string): void {
+    const relay = this.relaySocket;
+    if (!relay || relay.readyState !== WebSocket.OPEN) return;
+    relay.send(text);
   }
 
   private handleGatewayMessage(data: RawData, isBinary: boolean): void {
