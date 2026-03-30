@@ -52,7 +52,7 @@ export function formatDayLabel(dateStr: string): string {
   const [, y, m, d] = match;
   const date = new Date(Date.UTC(Number(y), Number(m) - 1, Number(d)));
   if (Number.isNaN(date.valueOf())) return dateStr;
-  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', timeZone: 'UTC' });
 }
 
 export function pct(part: number, total: number): number {
